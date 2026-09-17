@@ -45,3 +45,8 @@ def get_laps(session_key: int) -> list[dict]:
 def get_stints(session_key: int) -> list[dict]:
     """Per-driver tyre stint records (compound, stint length) for a session."""
     return _get("stints", session_key=session_key)
+
+
+def get_drivers(session_key: int) -> list[dict]:
+    """Driver/team info for a session."""
+    return _get("drivers", session_key=session_key)

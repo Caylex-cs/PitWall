@@ -115,3 +115,34 @@ starting grid (OpenF1's `position` endpoint) but at zero time separation
 traffic penalty is a function of gap only, with no explicit DRS/pass
 success-or-fail mechanic, so a big enough pace advantage always
 eventually gets through given enough laps.
+
+### Undercut / overcut calculator
+
+The actual pit-wall question isn't "what's optimal in the abstract," it's
+"we're 1.0s behind them right now, on these tyres — if we pit this lap and
+they respond in N laps, do we come out ahead?" `pitwall/undercut.py`
+answers exactly that: given two drivers' current gap and tyre state, it
+projects the gap lap by lap for a chosen pit-lap pair, or searches for the
+defender's latest safe response lap. This runs in isolation (just the two
+cars' fitted pace/degradation/pit-loss, clear air) — the same simplified
+picture a strategist sketches on a whiteboard.
+
+```
+python scripts/undercut_calculator.py --session-key 9590 \
+    --attacker 4 --defender 16 --current-lap 13 \
+    --attacker-pit-lap 14 --new-compound HARD --horizon-lap 25
+```
+
+reads the two drivers' *real* gap and tyre age from the race, projects
+the undercut, and then cross-checks the same scenario against the full
+20-car `race_simulator` (the other 18 drivers' real strategies included)
+to see whether real traffic changes the answer. Run against the actual
+Monza 2024 Norris-undercuts-Leclerc lap: both the isolated calculator and
+the full-grid check agree the undercut works in the short term — but
+grafting in Norris's real, further second stop shows the gap flipping
+back in Leclerc's favor by the finish (+2.9s), matching the real result.
+The same calculator on Hungary 2025 (Piastri undercutting Leclerc at lap
+18) shows the advantage holding and growing to a real 35.6s by the end —
+also matching what actually happened. The two cross-checks (isolated vs.
+full-grid) routinely disagree in *magnitude*, which is the point: it's
+usually the other 18 cars' traffic making up the difference.

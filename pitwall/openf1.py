@@ -25,3 +25,18 @@ def get_race_sessions() -> list[dict]:
 def get_weather(session_key: int) -> list[dict]:
     """Weather samples (roughly one per minute) for a session."""
     return _get("weather", session_key=session_key)
+
+
+def get_race_control(session_key: int) -> list[dict]:
+    """Flags, safety car and red flag messages for a session."""
+    return _get("race_control", session_key=session_key)
+
+
+def get_pit(session_key: int) -> list[dict]:
+    """Individual pit stop records for a session."""
+    return _get("pit", session_key=session_key)
+
+
+def get_laps(session_key: int) -> list[dict]:
+    """Lap-by-lap timing records for a session."""
+    return _get("laps", session_key=session_key)

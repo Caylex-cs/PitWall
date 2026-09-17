@@ -50,3 +50,8 @@ def get_stints(session_key: int) -> list[dict]:
 def get_drivers(session_key: int) -> list[dict]:
     """Driver/team info for a session."""
     return _get("drivers", session_key=session_key)
+
+
+def get_intervals(session_key: int) -> list[dict]:
+    """Time-series gap-to-car-ahead (`interval`) and gap-to-leader for a session."""
+    return _get("intervals", session_key=session_key)

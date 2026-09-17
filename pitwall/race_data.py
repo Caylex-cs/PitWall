@@ -20,7 +20,12 @@ _ENDPOINTS = {
     "drivers": openf1.get_drivers,
     "race_control": openf1.get_race_control,
     "weather": openf1.get_weather,
+    "intervals": openf1.get_intervals,
 }
+
+# Interval samples land every ~4s; a lap end matched more than this many
+# seconds from the nearest sample is treated as unmatched (no gap data).
+_INTERVAL_MATCH_TOLERANCE_SECONDS = 8
 
 
 def _load_raw(session_key: int, name: str) -> list[dict]:
@@ -43,6 +48,7 @@ class RaceData:
     drivers: pd.DataFrame
     race_control: pd.DataFrame
     weather: pd.DataFrame
+    intervals: pd.DataFrame
 
 
 def load_race(session_key: int) -> RaceData:
@@ -109,3 +115,38 @@ def laps_with_stint_info(race: RaceData) -> pd.DataFrame:
         lambda r: (r["driver_number"], r["lap_number"]) in pit_in_laps, axis=1
     )
     return merged
+
+
+def laps_with_gap_to_car_ahead(race: RaceData) -> pd.DataFrame:
+    """Laps joined with `interval` (gap in seconds to the car ahead) as of
+    each lap's end, for measuring traffic effects on pace.
+
+    OpenF1's `intervals` endpoint is a time series (~1 sample every 4s per
+    driver), not one row per lap, so each lap is matched to its nearest
+    interval sample within `_INTERVAL_MATCH_TOLERANCE_SECONDS`. The race
+    leader has no car ahead and always has `interval` 0 in the source data.
+    """
+    laps = race.laps.copy()
+    laps["lap_end_time"] = (
+        pd.to_datetime(laps["date_start"], format="ISO8601") + pd.to_timedelta(laps["lap_duration"], unit="s")
+    ).astype("datetime64[ns, UTC]")
+
+    intervals = race.intervals.copy()
+    intervals["date"] = pd.to_datetime(intervals["date"], format="ISO8601").astype("datetime64[ns, UTC]")
+
+    matched = []
+    for driver, driver_laps in laps.dropna(subset=["lap_end_time"]).groupby("driver_number"):
+        driver_intervals = intervals[intervals["driver_number"] == driver].sort_values("date")
+        if driver_intervals.empty:
+            continue
+        merged = pd.merge_asof(
+            driver_laps.sort_values("lap_end_time"),
+            driver_intervals[["date", "interval"]],
+            left_on="lap_end_time",
+            right_on="date",
+            direction="nearest",
+            tolerance=pd.Timedelta(seconds=_INTERVAL_MATCH_TOLERANCE_SECONDS),
+        )
+        matched.append(merged)
+
+    return pd.concat(matched, ignore_index=True) if matched else laps.assign(interval=pd.NA)

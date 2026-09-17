@@ -35,12 +35,45 @@ strategic split in the field) and picked the **2024 Italian GP at Monza**
   and sweeps for the best 1-stop / 2-stop split.
 
 ```
-python scripts/build_strategy_model.py
+python scripts/build_strategy_model.py --session-key 9590   # 2024 Monza
+python scripts/build_strategy_model.py --session-key 9928   # 2025 Hungary
 ```
 
-fits the model for Monza 2024 and validates it against what actually
-happened: it correctly predicts Leclerc's 1-stop beating Norris's 2-stop
-(matching the real result), and finds the best 1-stop and 2-stop strategies
-for an average car are within ~10 seconds of each other over 53 laps —
-consistent with the field actually splitting close to 50/50 between the two
-plans.
+fits the model for a race and validates it against what actually happened:
+for both Monza 2024 and Hungary 2025 it correctly predicts the real 1-stop
+vs 2-stop gap to within a few seconds over the full race distance, and its
+best-1-stop-vs-best-2-stop sweep for an average car comes out close to a
+toss-up — consistent with both races' fields actually splitting close to
+50/50 between the two plans (which is why they were picked).
+
+Two known limits, both deliberately surfaced by stress-testing on more
+races rather than papered over:
+- **No track-evolution term.** Fit against a mixed wet/dry race
+  (`--session-key 9558`, 2024 British GP) and the degradation rates come
+  out negative — the drying track swamps real tyre wear. This model should
+  only be trusted on stable, dry-condition races.
+- **No traffic model, on its own.** See below.
+
+### Traffic / overtaking difficulty
+
+`pitwall/traffic.py` fits how much pace a lap loses running close behind
+another car: it takes each lap's leftover residual against the
+degradation model (actual time minus predicted clear-air time) and bins it
+by `interval` (OpenF1's timed gap to the car ahead), so it captures
+circuit-specific overtaking difficulty rather than assuming one universal
+"dirty air" cost.
+
+`pitwall/strategy.py`'s `simulate_strategy`/`best_one_stop` now take an
+optional `traffic` model and a per-lap gap profile (`traffic_profile_after_stops`
+builds one for "rejoins behind another car for N laps after every stop").
+
+```
+python scripts/traffic_impact.py --session-key 9590   # Monza: fast, easy to follow
+python scripts/traffic_impact.py --session-key 9928   # Hungary: tight, hard to follow
+```
+
+fits the traffic penalty and prices the same scenario (rejoining 0.8s
+behind a car for 4 laps after a stop) at both circuits: it costs ~0.8s at
+Monza but ~1.9s at Hungary — the model correctly prices Hungary as harder
+to pass through, matching its real-world reputation, using nothing but
+each race's own timing data.

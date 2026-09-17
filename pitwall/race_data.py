@@ -51,6 +51,16 @@ def load_race(session_key: int) -> RaceData:
     return RaceData(session_key=session_key, **tables)
 
 
+def driver_plan(race: RaceData, driver_number: int) -> list[tuple[str, int]]:
+    """A driver's actual stint plan as [(compound, stint_length_in_laps), ...]."""
+    stints = race.stints[race.stints["driver_number"] == driver_number].sort_values("stint_number")
+    return [(row["compound"], row["lap_end"] - row["lap_start"] + 1) for _, row in stints.iterrows()]
+
+
+def num_stops(race: RaceData, driver_number: int) -> int:
+    return len(race.stints[race.stints["driver_number"] == driver_number]) - 1
+
+
 def laps_with_stint_info(race: RaceData) -> pd.DataFrame:
     """Laps joined with the compound/tyre-age of the stint each lap was run in."""
     laps = race.laps.copy()

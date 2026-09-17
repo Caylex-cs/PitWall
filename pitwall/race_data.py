@@ -21,6 +21,7 @@ _ENDPOINTS = {
     "race_control": openf1.get_race_control,
     "weather": openf1.get_weather,
     "intervals": openf1.get_intervals,
+    "position": openf1.get_position,
 }
 
 # Interval samples land every ~4s; a lap end matched more than this many
@@ -49,6 +50,7 @@ class RaceData:
     race_control: pd.DataFrame
     weather: pd.DataFrame
     intervals: pd.DataFrame
+    position: pd.DataFrame
 
 
 def load_race(session_key: int) -> RaceData:
@@ -81,6 +83,34 @@ def driver_plan(race: RaceData, driver_number: int) -> list[tuple[str, int]]:
 
 def num_stops(race: RaceData, driver_number: int) -> int:
     return len(race.stints[race.stints["driver_number"] == driver_number]) - 1
+
+
+def all_driver_numbers(race: RaceData) -> list[int]:
+    """Every driver who appears in the session, grid-position order isn't
+    implied -- use starting_grid_order for that."""
+    return sorted(race.drivers["driver_number"].unique())
+
+
+def driver_last_lap(race: RaceData, driver_number: int) -> int:
+    """The last lap a driver actually completed (their retirement lap, or
+    the race's final lap if they finished)."""
+    laps = race.laps[race.laps["driver_number"] == driver_number]["lap_number"]
+    return int(laps.max()) if len(laps) else 0
+
+
+def actual_total_time(race: RaceData, driver_number: int) -> float:
+    """Sum of a driver's actual recorded lap times (their real result, for
+    validating a simulation against)."""
+    return race.laps[race.laps["driver_number"] == driver_number]["lap_duration"].sum()
+
+
+def starting_grid_order(race: RaceData) -> list[int]:
+    """Driver numbers in starting-grid order, from each driver's earliest
+    `position` sample (OpenF1 doesn't expose a dedicated grid endpoint, but
+    position tracking starts before the race and reflects grid order)."""
+    position = race.position.sort_values("date")
+    first_position = position.groupby("driver_number").first()
+    return list(first_position.sort_values("position").index)
 
 
 def laps_with_stint_info(race: RaceData) -> pd.DataFrame:

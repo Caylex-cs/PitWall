@@ -60,11 +60,12 @@ class DegradationModel:
     excluded_compounds: dict[str, int]  # compound -> lap count, too few to fit
 
     def predict_lap(self, driver_number: int, lap_number: int, compound: str, tyre_age: int) -> float:
-        return (
-            self.driver_pace[driver_number]
-            + self.fuel_slope * lap_number
-            + self.deg_rate[compound] * tyre_age
-        )
+        # A compound in excluded_compounds (too few clean laps to fit, e.g.
+        # one driver's single-lap soft-tyre dash) has no reliable slope of
+        # its own; treating it as flat (no extra wear) is a deliberate,
+        # visible approximation rather than a crash.
+        deg_rate = self.deg_rate.get(compound, 0.0)
+        return self.driver_pace[driver_number] + self.fuel_slope * lap_number + deg_rate * tyre_age
 
 
 def fit_degradation_model(race: RaceData) -> DegradationModel:

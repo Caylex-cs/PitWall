@@ -77,3 +77,41 @@ behind a car for 4 laps after a stop) at both circuits: it costs ~0.8s at
 Monza but ~1.9s at Hungary — the model correctly prices Hungary as harder
 to pass through, matching its real-world reputation, using nothing but
 each race's own timing data.
+
+That version still only simulates one car against a gap profile you pick
+by hand. `pitwall/race_simulator.py` is the real thing: every driver on
+the grid, together, lap by lap. Each car's clear-air pace comes from the
+degradation model; each lap it's charged the traffic model's penalty for
+*last* lap's gap to whoever was ahead of it; the field is re-sorted by
+cumulative time to get the next lap's gaps. Overtakes are never scripted
+— if a car's pace advantage outweighs the penalty from being stuck behind,
+the gap keeps closing lap after lap until it crosses zero and the sort
+puts that car ahead next lap. Retirees drop out of the field (and stop
+blocking anyone) after their last completed lap instead of being forced
+to "finish."
+
+```
+python scripts/simulate_race.py --session-key 9590 --swap-driver 4    # 2024 Monza
+python scripts/simulate_race.py --session-key 9928 --swap-driver 81   # 2025 Hungary
+```
+
+Feed it every driver's *real* strategy and it reconstructs the actual
+race: mean |simulated finishing position − actual finishing position|
+across the full 20-car grid was **0.70 at Monza** and **0.90 at Hungary**
+— most positions exact, the rest off by one or two. `--swap-driver`
+re-runs one driver on the model's alternate best strategy with the other
+19 drivers' *real* strategies held fixed, and re-simulates the whole
+field: at Monza, swapping Norris from his real 2-stop to the model's best
+1-stop flips him from P2 to the win — a data-grounded reconstruction of
+why Monza 2024 actually came down to a 1-stop-vs-2-stop strategy call.
+At Hungary, swapping Piastri from his real 2-stop to a 1-stop makes him
+*slower* (P2 either way, but a bigger gap) — the model isn't just biased
+toward "fewer stops is always better," it can and does tell you a real
+strategy was already the right call.
+
+Simplifications worth knowing about: lap-1 gaps are seeded from the real
+starting grid (OpenF1's `position` endpoint) but at zero time separation
+("perfect start," no reaction times or first-corner incidents); the
+traffic penalty is a function of gap only, with no explicit DRS/pass
+success-or-fail mechanic, so a big enough pace advantage always
+eventually gets through given enough laps.

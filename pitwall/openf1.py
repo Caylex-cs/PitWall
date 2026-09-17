@@ -55,3 +55,8 @@ def get_drivers(session_key: int) -> list[dict]:
 def get_intervals(session_key: int) -> list[dict]:
     """Time-series gap-to-car-ahead (`interval`) and gap-to-leader for a session."""
     return _get("intervals", session_key=session_key)
+
+
+def get_position(session_key: int) -> list[dict]:
+    """Time-series classification position per driver (one row per change)."""
+    return _get("position", session_key=session_key)

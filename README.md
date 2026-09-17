@@ -164,3 +164,26 @@ standings and per-driver gap-to-leader traces (simulated vs. actual), the
 swap-driver what-if, and the undercut/overcut projection. Nothing in the
 JSON is computed independently of the modules above — it's their existing
 outputs, reshaped for charts.
+
+### Play with a driver's strategy
+
+The dashboard's most direct question: *pick a driver, hold every other
+driver's real strategy fixed, and see how their result changes as you
+move their pit stop.* `scripts/build_pitstop_sweep.py` brute-forces the
+answer rather than approximating it: for every driver, every fitted
+compound, and every possible single pit lap, it rebuilds that one
+driver's plan and re-runs the full 20-car `race_simulator`, recording
+their finishing position and gap to the winner. A few thousand full-grid
+simulations per race, each a few milliseconds, written to
+`pitwall/data/pitstop_sweep.json`:
+
+```
+python scripts/build_pitstop_sweep.py
+```
+
+The dashboard's "Try it yourself" panel reads that file — a driver
+picker, a tyre-compound choice, and a pit-lap slider (draggable directly
+on the chart, too) update an exact simulated result live, with the
+driver's real result marked for comparison. No client-side model runs;
+every point was already simulated in Python and the browser is just
+looking it up.

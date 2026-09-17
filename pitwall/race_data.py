@@ -51,9 +51,25 @@ def load_race(session_key: int) -> RaceData:
     return RaceData(session_key=session_key, **tables)
 
 
+def _stints_with_resolved_ends(race: RaceData) -> pd.DataFrame:
+    """OpenF1 leaves `lap_end` null for a driver's final stint when it was
+    never explicitly closed by a later pit stop (a retirement, or simply the
+    last stint of the race for some drivers). Fill it with the last lap that
+    driver actually ran. A stint with no `lap_start` at all (e.g. a car that
+    retired before completing a lap) has no usable range and is dropped."""
+    stints = race.stints.dropna(subset=["lap_start"]).copy()
+    last_lap = race.laps.groupby("driver_number")["lap_number"].max()
+    stints["lap_end"] = stints["lap_end"].fillna(stints["driver_number"].map(last_lap))
+    stints = stints.dropna(subset=["lap_end"])
+    stints["lap_start"] = stints["lap_start"].astype(int)
+    stints["lap_end"] = stints["lap_end"].astype(int)
+    return stints
+
+
 def driver_plan(race: RaceData, driver_number: int) -> list[tuple[str, int]]:
     """A driver's actual stint plan as [(compound, stint_length_in_laps), ...]."""
-    stints = race.stints[race.stints["driver_number"] == driver_number].sort_values("stint_number")
+    stints = _stints_with_resolved_ends(race)
+    stints = stints[stints["driver_number"] == driver_number].sort_values("stint_number")
     return [(row["compound"], row["lap_end"] - row["lap_start"] + 1) for _, row in stints.iterrows()]
 
 
@@ -64,7 +80,7 @@ def num_stops(race: RaceData, driver_number: int) -> int:
 def laps_with_stint_info(race: RaceData) -> pd.DataFrame:
     """Laps joined with the compound/tyre-age of the stint each lap was run in."""
     laps = race.laps.copy()
-    stints = race.stints.copy()
+    stints = _stints_with_resolved_ends(race)
 
     rows = []
     for driver, driver_stints in stints.groupby("driver_number"):

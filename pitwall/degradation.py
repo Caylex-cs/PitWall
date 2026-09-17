@@ -17,6 +17,15 @@ model only works because different drivers pit on different laps: at any
 given lap_number, tyre_age varies across the field, which is what lets the
 regression separate "the race has gone on this long" from "this tyre is
 this old."
+
+This has no term for changing track conditions (rain arriving/leaving, a
+drying or greasy track). On a wet or mixed-conditions race, lap time swings
+from track evolution are much larger than tyre wear and get misattributed
+to `deg_rate`/`fuel_slope` instead, producing nonsensical (even negative)
+degradation rates. Only trust this on races run entirely in stable, dry
+conditions -- see scripts/build_strategy_model.py run against
+session_key=9558 (2024 British GP, mixed wet/dry) for what that failure
+looks like in practice.
 """
 
 from __future__ import annotations

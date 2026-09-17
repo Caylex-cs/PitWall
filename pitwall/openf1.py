@@ -1,0 +1,27 @@
+"""Thin client for the OpenF1 REST API (https://openf1.org)."""
+
+from __future__ import annotations
+
+import requests
+
+BASE_URL = "https://api.openf1.org/v1"
+TIMEOUT = 30
+
+
+def _get(path: str, **params) -> list[dict]:
+    response = requests.get(f"{BASE_URL}/{path}", params=params, timeout=TIMEOUT)
+    if response.status_code == 404:
+        # OpenF1 returns 404 (rather than an empty list) when a session has no data yet.
+        return []
+    response.raise_for_status()
+    return response.json()
+
+
+def get_race_sessions() -> list[dict]:
+    """All Race sessions across every season OpenF1 has data for."""
+    return _get("sessions", session_type="Race")
+
+
+def get_weather(session_key: int) -> list[dict]:
+    """Weather samples (roughly one per minute) for a session."""
+    return _get("weather", session_key=session_key)

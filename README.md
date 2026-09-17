@@ -146,3 +146,21 @@ The same calculator on Hungary 2025 (Piastri undercutting Leclerc at lap
 also matching what actually happened. The two cross-checks (isolated vs.
 full-grid) routinely disagree in *magnitude*, which is the point: it's
 usually the other 18 cars' traffic making up the difference.
+
+## Results dashboard
+
+Every model above prints to stdout; `scripts/build_dashboard_data.py` runs
+the whole pipeline for both validated races and shapes the output into one
+JSON file for a browser-based dashboard instead:
+
+```
+python scripts/build_dashboard_data.py   # writes pitwall/data/dashboard.json
+```
+
+covers the degradation scatter (fuel-corrected, per compound, with fitted
+lines), the pit-loss distribution, the 1-stop/2-stop strategy sweep, the
+Monza-vs-Hungary traffic-penalty comparison, the full-grid simulation's
+standings and per-driver gap-to-leader traces (simulated vs. actual), the
+swap-driver what-if, and the undercut/overcut projection. Nothing in the
+JSON is computed independently of the modules above — it's their existing
+outputs, reshaped for charts.

@@ -148,8 +148,9 @@ def laps_with_stint_info(race: RaceData) -> pd.DataFrame:
 
 
 def laps_with_gap_to_car_ahead(race: RaceData) -> pd.DataFrame:
-    """Laps joined with `interval` (gap in seconds to the car ahead) as of
-    each lap's end, for measuring traffic effects on pace.
+    """Laps joined with `interval` (gap to the car ahead) and `gap_to_leader`
+    as of each lap's end, for measuring traffic effects and for plotting a
+    real gap-to-leader chart.
 
     OpenF1's `intervals` endpoint is a time series (~1 sample every 4s per
     driver), not one row per lap, so each lap is matched to its nearest
@@ -171,7 +172,7 @@ def laps_with_gap_to_car_ahead(race: RaceData) -> pd.DataFrame:
             continue
         merged = pd.merge_asof(
             driver_laps.sort_values("lap_end_time"),
-            driver_intervals[["date", "interval"]],
+            driver_intervals[["date", "interval", "gap_to_leader"]],
             left_on="lap_end_time",
             right_on="date",
             direction="nearest",
